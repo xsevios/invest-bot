@@ -128,7 +128,10 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-#My
+# My
 .idea/*
 TODO.txt
 *.pyc
+
+# MacOS
+.DS_Store
