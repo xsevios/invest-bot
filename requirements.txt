@@ -6,3 +6,4 @@ matplotlib
 numpy
 pandas
 torch
+statsmodels
