@@ -133,6 +133,7 @@ dmypy.json
 TODO.txt
 *.pyc
 research/data/csv
+research/data/zip
 
 # MacOS
 .DS_Store
