@@ -132,6 +132,7 @@ dmypy.json
 .idea/*
 TODO.txt
 *.pyc
+research/data/csv
 
 # MacOS
 .DS_Store
