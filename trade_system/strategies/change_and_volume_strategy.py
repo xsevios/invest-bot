@@ -19,6 +19,10 @@ class ChangeAndVolumeStrategy(IStrategy):
     Example of trade strategy.
     IMPORTANT: DO NOT USE IT FOR REAL TRADING!
     """
+
+    def analyze_orderbooks(self, candles: list[HistoricCandle]) -> Optional[Signal]:
+        pass
+
     # Consts for read and parse dict with strategy configuration
 
     __SIGNAL_VOLUME_NAME = "SIGNAL_VOLUME"

@@ -73,7 +73,7 @@ class TradeService:
             logger.info("Check trading schedule on today")
 
             try:
-                is_trading_day, start_time, end_time = \
+                is_trading_day, main_start_time, main_end_time, evening_start_time, evening_end_time = \
                     self.__instrument_service.moex_today_trading_schedule()
                 # for tests purposes
                 #is_trading_day, start_time, end_time = \
@@ -81,7 +81,17 @@ class TradeService:
                 #    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc) + datetime.timedelta(seconds=10), \
                 #    datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc) + datetime.timedelta(minutes=12)
 
-                if is_trading_day and datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc) <= end_time:
+                start_time = None
+                end_time = None
+
+                if is_trading_day and datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc) <= main_end_time:
+                    start_time = main_start_time
+                    end_time = main_end_time
+                elif is_trading_day and datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc) <= evening_end_time:
+                    start_time = evening_start_time
+                    end_time = evening_end_time
+
+                if (start_time and end_time):
                     logger.info(f"Today is trading day. Trading will start after {start_time}")
 
                     await TradeService.__sleep_to(

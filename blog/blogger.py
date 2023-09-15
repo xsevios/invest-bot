@@ -46,14 +46,14 @@ class Blogger:
         The method sends message about depo size, list of stocks for today trading and greetings also.
         """
         if self.__blog_status:
+            stocks_list = ""
+            for figi_key, strategy_value in today_trade_strategy.items():
+                stocks_list = f"{stocks_list}\nTicker: {strategy_value.settings.ticker}. Short trade status: {strategy_value.settings.short_enabled_flag}"
+
             self.__send_text_message("Greetings! We are starting.")
             self.__send_text_message(f"Depo size: {rub_before_trade_day:.2f} rub")
             self.__send_text_message("Stocks list:")
-            for figi_key, strategy_value in today_trade_strategy.items():
-                self.__send_text_message(
-                    f"Ticker: {strategy_value.settings.ticker}. "
-                    f"Short trade status: {strategy_value.settings.short_enabled_flag}"
-                )
+            self.__send_text_message(stocks_list)
 
     def finish_trading_message(self) -> None:
         """
@@ -171,6 +171,9 @@ class Blogger:
                 f"Total commissions: "
                 f"{summary_commission:.2f}."
             )
+
+    def send_text_message(self, text: str) -> None:
+        self.__send_text_message(text)
 
     @staticmethod
     def __signal_type_to_message_test(signal_type: SignalType) -> str:

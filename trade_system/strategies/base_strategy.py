@@ -2,7 +2,7 @@ import abc
 import logging
 from typing import Optional
 
-from tinkoff.invest import HistoricCandle
+from tinkoff.invest import HistoricCandle, OrderBook
 
 from configuration.settings import StrategySettings
 from trade_system.signal import Signal
@@ -20,6 +20,10 @@ class IStrategy(abc.ABC):
 
     @abc.abstractmethod
     def analyze_candles(self, candles: list[HistoricCandle]) -> Optional[Signal]:
+        pass
+
+    @abc.abstractmethod
+    def analyze_orderbooks(self, orderbook: OrderBook) -> Optional[Signal]:
         pass
 
     @abc.abstractmethod

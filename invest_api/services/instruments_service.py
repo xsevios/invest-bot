@@ -20,7 +20,7 @@ class InstrumentService:
         self.__token = token
         self.__app_name = app_name
 
-    def moex_today_trading_schedule(self) -> (bool, datetime, datetime):
+    def moex_today_trading_schedule(self) -> (bool, datetime, datetime, datetime, datetime):
         """
         :return: Information about trading day status, datetime trading day start, datetime trading day end
         (both on today)
@@ -33,9 +33,9 @@ class InstrumentService:
             for day in schedule.days:
                 if day.date.date() == datetime.date.today():
                     logger.info(f"MOEX today schedule: {day}")
-                    return day.is_trading_day, day.start_time, day.end_time
+                    return day.is_trading_day, day.start_time, day.end_time, day.evening_start_time, day.evening_end_time
 
-        return False, datetime.datetime.utcnow(), datetime.datetime.utcnow()
+        return False, datetime.datetime.utcnow(), datetime.datetime.utcnow(), datetime.datetime.utcnow(), datetime.datetime.utcnow()
 
     @invest_api_retry()
     @invest_error_logging
@@ -56,6 +56,12 @@ class InstrumentService:
                     to=_to
             ).exchanges:
                 logger.debug(f"{schedule}")
+
+                for day in schedule.days:
+                    if day.is_trading_day:
+                        day.evening_start_time = day.end_time + datetime.timedelta(minutes=25, seconds=1)
+                        day.evening_end_time = day.end_time + datetime.timedelta(hours=5, minutes=10)
+
                 result.append(schedule)
 
         return result

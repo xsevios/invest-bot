@@ -37,6 +37,8 @@ class AccountService:
             for account in client.users.get_accounts().accounts:
                 logger.info(f"Account settings: {account}")
 
+                return account.id
+
                 if account.access_level == AccessLevel.ACCOUNT_ACCESS_LEVEL_FULL_ACCESS \
                         and account.type == AccountType.ACCOUNT_TYPE_TINKOFF \
                         and account.status == AccountStatus.ACCOUNT_STATUS_OPEN:
