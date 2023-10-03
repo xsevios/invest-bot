@@ -131,6 +131,7 @@ class Trader:
         ):
             candle = market_data.candle
             orderbook = market_data.orderbook
+            trade = market_data.trade
 
             if orderbook:
                 self.__process_new_orderbook(orderbook, strategies)

@@ -55,22 +55,31 @@ class MarketDataStreamService:
                 ]
             )
 
+            async_market_data_stream.trades.subscribe(
+                [
+                    TradeInstrument(
+                        figi=figi,
+                    )
+                    for figi in figies
+                ]
+            )
+
             async for market_data in async_market_data_stream:
                 logger.debug(f"market_data: {market_data}")
 
                 # trading will stop at trade_before_time
                 if datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc) >= trade_before_time:
                     logger.debug(f"Time to stop candle stream")
-                    self.__stop_candles_stream(async_market_data_stream)
+                    self.__stop_stream(async_market_data_stream)
                     break
 
                 if market_data.candle or market_data.orderbook:
                     yield market_data
 
-        self.__stop_candles_stream(async_market_data_stream)
+        self.__stop_stream(async_market_data_stream)
 
     @staticmethod
-    def __stop_candles_stream(stream: IMarketDataStreamManager) -> None:
+    def __stop_stream(stream: IMarketDataStreamManager) -> None:
         if stream:
             logger.info(f"Stopping candles stream")
             stream.stop()
