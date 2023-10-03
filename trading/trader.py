@@ -109,7 +109,7 @@ class Trader:
             self,
             account_id: str,
             trading_settings: TradingSettings,
-            strategies: dict[str, IStrategy],
+            strategies: dict[str, list[IStrategy]],
             trade_day_end_time: datetime
     ) -> None:
         logger.info(f"Subscribe and read Candles for {strategies.keys()}")
@@ -144,24 +144,26 @@ class Trader:
     def __process_new_orderbook(
             self,
             orderbook: OrderBook,
-            strategies: dict[str, IStrategy],
+            strategies: dict[str, list[IStrategy]],
     ) -> None:
         try:
-            signal = strategies[orderbook.figi].analyze_orderbooks(orderbook)
-            if signal:
-                if signal.signal_type == SignalType.HUGE_ORDER_EAT:
-                    self.__blogger.send_text_message(
-                        f"Huge order decreased: {strategy.settings.ticker}, "
-                        f"quantity={signal.quantity}(-{signal.prev_quantity - signal.quantity}), "
-                        f"price={signal.price}, "
-                        f"{signal.bid_ask}"
-                    )
-                elif signal.signal_type == SignalType.HUGE_ORDER_APPEARED:
-                    self.__blogger.send_text_message(
-                        f"Huge order found: {strategy.settings.ticker}, "
-                        f"quantity={signal.quantity}({signal.prev_quantity}), "
-                        f"price={signal.price}, "
-                        f"{signal.bid_ask}"
+            for strategy in strategies[orderbook.figi]:
+                signal = strategy.analyze_orderbooks(orderbook)
+
+                if signal:
+                    if signal.signal_type == SignalType.HUGE_ORDER_EAT:
+                        self.__blogger.send_text_message(
+                            f"Huge order decreased: {strategy.settings.ticker}, "
+                            f"quantity={signal.quantity}(-{signal.prev_quantity - signal.quantity}), "
+                            f"price={signal.price}, "
+                            f"{signal.bid_ask}"
+                        )
+                    elif signal.signal_type == SignalType.HUGE_ORDER_APPEARED:
+                        self.__blogger.send_text_message(
+                            f"Huge order found: {strategy.settings.ticker}, "
+                            f"quantity={signal.quantity}({signal.prev_quantity}), "
+                            f"price={signal.price}, "
+                            f"{signal.bid_ask}"
                         )
         except Exception as ex:
             logger.error(f"Trading orderbook error: {repr(ex)}\n{traceback.format_exc()}")
@@ -171,7 +173,7 @@ class Trader:
             account_id: str,
             candle: Candle,
             current_candles: dict[str, Candle],
-            strategies: dict[str, IStrategy],
+            strategies: dict[str, list[IStrategy]],
             signals_before_time: datetime
     ) -> None:
         current_figi_candle = current_candles.setdefault(candle.figi, candle)
@@ -342,12 +344,12 @@ class Trader:
 
         return result
 
-    def __get_today_strategies(self, strategies: list[IStrategy]) -> dict[str, IStrategy]:
+    def __get_today_strategies(self, strategies: list[IStrategy]) -> dict[str, list[IStrategy]]:
         """
         Check and Select stocks for trading today.
         """
         logger.info("Check shares and strategy settings")
-        today_trade_strategy: dict[str, IStrategy] = dict()
+        today_trade_strategy: dict[str, list[IStrategy]] = dict()
 
         for strategy in strategies:
             share_settings = self.__instrument_service.share_by_figi(strategy.settings.figi)
