@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from tinkoff.invest import Quotation
 
 __all__ = ("StrategySettings", "AccountSettings", "ShareSettings", "TradingSettings", "BlogSettings")
 
@@ -31,6 +32,7 @@ class ShareSettings:
     buy_available_flag: bool = False
     sell_available_flag: bool = False
     api_trade_available_flag: bool = False
+    min_price_increment: Quotation = 0
 
 
 @dataclass(eq=False, repr=True)

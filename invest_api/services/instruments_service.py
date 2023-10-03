@@ -88,7 +88,8 @@ class InstrumentService:
                 otc_flag=share.otc_flag,
                 buy_available_flag=share.buy_available_flag,
                 sell_available_flag=share.sell_available_flag,
-                api_trade_available_flag=share.api_trade_available_flag
+                api_trade_available_flag=share.api_trade_available_flag,
+                min_price_increment=share.min_price_increment
             )
 
     @invest_api_retry()
