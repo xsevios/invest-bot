@@ -27,6 +27,10 @@ class IStrategy(abc.ABC):
         pass
 
     @abc.abstractmethod
+    def analyze_all(self, orderbook: OrderBook) -> Optional[Signal]:
+        pass
+
+    @abc.abstractmethod
     def update_lot_count(self, lot: int) -> None:
         pass
 
