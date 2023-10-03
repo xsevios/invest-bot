@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 class SignalType(enum.IntEnum):
     LONG = 0
     SHORT = 1
-    HUGE_ORDER = 2
+    HUGE_ORDER_EAT = 2
+    HUGE_ORDER_APPEARED = 3
 
 
 @dataclass(frozen=True, eq=False, repr=True)

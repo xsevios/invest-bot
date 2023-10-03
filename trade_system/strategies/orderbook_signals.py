@@ -63,13 +63,13 @@ class OrderBookSignals(IStrategy):
         huge_buy_order = False
         huge_sell_order = False
 
-        for i, bid in enumerate(orderbook.bids[:5]):
+        for i, bid in enumerate(orderbook.bids[:10]):
             if bid.quantity == quantity_max:
                 quantity_depth = i
                 bid_ask = "bid"
                 huge_buy_order = True
 
-        for i, ask in enumerate(orderbook.asks[:5]):
+        for i, ask in enumerate(orderbook.asks[:10]):
             if ask.quantity == quantity_max:
                 quantity_depth = i
                 bid_ask = "ask"
@@ -78,7 +78,7 @@ class OrderBookSignals(IStrategy):
         if current_huge_order is None:
             return None
 
-        if quantity_90th * 4 > quantity_max:
+        if quantity_90th * 5 > quantity_max:
             return None
 
         if huge_sell_order is False and huge_buy_order is False:
@@ -89,11 +89,13 @@ class OrderBookSignals(IStrategy):
             return None
 
         # continue if current huge order has the same price and lower quantity than previous detected order
-        if self.__last_huge_order is not None and (self.__last_huge_order.price == current_huge_order.price and self.__last_huge_order.quantity <= current_huge_order.quantity):
+        if self.__last_huge_order is not None and (self.__last_huge_order.price == current_huge_order.price and
+                                                   self.__last_huge_order.quantity <= current_huge_order.quantity):
             return None
 
         # continue if quantity difference is less than 10%
-        if self.__last_huge_order is not None and self.__last_huge_order.quantity - current_huge_order.quantity < self.__last_huge_order.quantity / 40:
+        if (self.__last_huge_order is not None and
+                self.__last_huge_order.quantity - current_huge_order.quantity < self.__last_huge_order.quantity / 40):
             return None
 
         prev_huge_order: Order = self.__last_huge_order
@@ -108,13 +110,32 @@ class OrderBookSignals(IStrategy):
           )
 
         if prev_huge_order is None:
-            return None
+            prev_orderbook = self.__recent_orderbooks[-2] if len(self.__recent_orderbooks) > 1 else None
+            prev_orders = prev_orderbook.asks + prev_orderbook.bids
 
-        return Signal(
-            figi=orderbook.figi,
-            signal_type=SignalType.HUGE_ORDER,
-            quantity=Decimal(quantity_max),
-            prev_quantity=Decimal(prev_huge_order.quantity),
-            price=quotation_to_decimal(current_huge_order.price),
-            bid_ask=bid_ask,
-        )
+            for prev_order in prev_orders:
+                prev_quantity = None
+
+                if prev_order.price == current_huge_order.price:
+                    prev_quantity = prev_order.quantity
+
+                return Signal(
+                    figi=orderbook.figi,
+                    signal_type=SignalType.HUGE_ORDER_APPEARED,
+                    quantity=Decimal(quantity_max),
+                    prev_quantity=Decimal(prev_quantity),
+                    price=quotation_to_decimal(current_huge_order.price),
+                    bid_ask=bid_ask,
+                )
+        else:
+            return Signal(
+                figi=orderbook.figi,
+                signal_type=SignalType.HUGE_ORDER_EAT,
+                quantity=Decimal(quantity_max),
+                prev_quantity=Decimal(prev_huge_order.quantity),
+                price=quotation_to_decimal(current_huge_order.price),
+                bid_ask=bid_ask,
+            )
+
+    def analyze_all(self, orderbook: OrderBook) -> Optional[Signal]:
+        pass

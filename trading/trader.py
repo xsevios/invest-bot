@@ -148,10 +148,20 @@ class Trader:
         try:
             signal = strategies[orderbook.figi].analyze_orderbooks(orderbook)
             if signal:
-                self.__blogger.send_text_message(f"Huge order found: {strategies[orderbook.figi].settings.ticker}, "
-                                                 f"quantity={signal.quantity}(-{signal.prev_quantity - signal.quantity}), "
-                                                 f"price={signal.price}, "
-                                                 f"{signal.bid_ask}")
+                if signal.signal_type == SignalType.HUGE_ORDER_EAT:
+                    self.__blogger.send_text_message(
+                        f"Huge order decreased: {strategy.settings.ticker}, "
+                        f"quantity={signal.quantity}(-{signal.prev_quantity - signal.quantity}), "
+                        f"price={signal.price}, "
+                        f"{signal.bid_ask}"
+                    )
+                elif signal.signal_type == SignalType.HUGE_ORDER_APPEARED:
+                    self.__blogger.send_text_message(
+                        f"Huge order found: {strategy.settings.ticker}, "
+                        f"quantity={signal.quantity}({signal.prev_quantity}), "
+                        f"price={signal.price}, "
+                        f"{signal.bid_ask}"
+                        )
         except Exception as ex:
             logger.error(f"Trading orderbook error: {repr(ex)}\n{traceback.format_exc()}")
 
