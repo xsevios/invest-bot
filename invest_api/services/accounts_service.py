@@ -39,6 +39,12 @@ class AccountService:
 
                 return account.id
 
+                if account.access_level == AccessLevel.ACCOUNT_ACCESS_LEVEL_READ_ONLY \
+                        and account.type == AccountType.ACCOUNT_TYPE_TINKOFF \
+                        and account.status == AccountStatus.ACCOUNT_STATUS_OPEN:
+                    result = account.id
+                    break
+
                 if account.access_level == AccessLevel.ACCOUNT_ACCESS_LEVEL_FULL_ACCESS \
                         and account.type == AccountType.ACCOUNT_TYPE_TINKOFF \
                         and account.status == AccountStatus.ACCOUNT_STATUS_OPEN:
