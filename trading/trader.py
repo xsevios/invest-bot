@@ -63,7 +63,7 @@ class Trader:
             logger.info("No shares to trade today.")
             return None
 
-        #self.__clear_all_positions(account_id, today_trade_strategies)
+        # self.__clear_all_positions(account_id, today_trade_strategies)
 
         rub_before_trade_day = self.__operation_service.available_rub_on_account(account_id)
         logger.info(f"Amount of RUB on account {rub_before_trade_day} and minimum for trading: {min_rub}")
@@ -310,7 +310,7 @@ class Trader:
     def __clear_all_positions(
             self,
             account_id: str,
-            strategies: dict[str, IStrategy]
+            strategies: dict[str, list[IStrategy]]
     ) -> dict[str, str]:
         logger.info("Clear all orders and close all open positions")
 
@@ -318,29 +318,31 @@ class Trader:
         self.__client_service.cancel_all_orders(account_id)
 
         logger.debug("Close all positions.")
-        return self.__close_position_by_figi(account_id, strategies.keys(), strategies)
+        return self.__close_position_by_figi(account_id, list(strategies.keys()), strategies)
 
     def __close_position_by_figi(
             self,
             account_id: str,
             figies: list[str],
-            strategies: dict[str, IStrategy]
+            strategies: dict[str, list[IStrategy]]
     ) -> dict[str, str]:
         result: dict[str, str] = dict()
         current_positions = self.__operation_service.positions_securities(account_id)
 
         if current_positions:
             logger.info(f"Current positions: {current_positions}")
-            for position in current_positions:
-                if position.figi in figies:
-                    # Check a stock
-                    if self.__market_data_service.is_stock_ready_for_trading(position.figi):
-                        result[position.figi] = self.__order_service.post_market_order(
-                            account_id=account_id,
-                            figi=position.figi,
-                            count_lots=abs(int(position.balance / strategies[position.figi].settings.lot_size)),
-                            is_buy=(position.balance < 0)
-                        )
+            for figi_strategies in strategies.values():
+                for strategy in figi_strategies:
+                    for position in current_positions:
+                        if position.figi in figies:
+                            # Check a stock
+                            if self.__market_data_service.is_stock_ready_for_trading(position.figi):
+                                result[position.figi] = self.__order_service.post_market_order(
+                                    account_id=account_id,
+                                    figi=position.figi,
+                                    count_lots=abs(int(position.balance / strategy.settings.lot_size)),
+                                    is_buy=(position.balance < 0)
+                                )
 
         return result
 
@@ -365,6 +367,6 @@ class Trader:
                 strategy.update_lot_count(share_settings.lot)
                 strategy.update_short_status(share_settings.short_enabled_flag)
 
-                today_trade_strategy[strategy.settings.figi] = strategy
+                today_trade_strategy[strategy.settings.figi].append(strategy)
 
         return today_trade_strategy

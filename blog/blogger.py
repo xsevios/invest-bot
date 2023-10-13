@@ -39,7 +39,7 @@ class Blogger:
 
     def start_trading_message(
             self,
-            today_trade_strategy: dict[str, IStrategy],
+            today_trade_strategy: dict[str, list[IStrategy]],
             rub_before_trade_day: Decimal
     ) -> None:
         """
@@ -47,8 +47,11 @@ class Blogger:
         """
         if self.__blog_status:
             stocks_list = ""
-            for figi_key, strategy_value in today_trade_strategy.items():
-                stocks_list = f"{stocks_list}\nTicker: {strategy_value.settings.ticker}. Short trade status: {strategy_value.settings.short_enabled_flag}"
+            for figi_key, strategies in today_trade_strategy.items():
+                for strategy in strategies:
+                    stocks_list = (f"{stocks_list}\nTicker: {strategy.settings.ticker}. "
+                                   f"S: {strategy.settings.short_enabled_flag} "
+                                   f"Strategy: {strategy.settings.name}")
 
             self.__send_text_message("Greetings! We are starting.")
             self.__send_text_message(f"Depo size: {rub_before_trade_day:.2f} rub")
