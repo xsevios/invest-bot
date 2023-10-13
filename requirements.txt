@@ -1,3 +1,5 @@
+grpcio --no-binary :all:
+
 tinkoff-investments
 aiogram
 
