@@ -4,7 +4,7 @@ import pprint
 import traceback
 from decimal import Decimal
 
-from tinkoff.invest import Candle, OrderBook
+from tinkoff.invest import Candle, OrderBook, Trade
 from tinkoff.invest.utils import quotation_to_decimal
 
 from blog.blogger import Blogger
@@ -85,6 +85,7 @@ class Trader:
             logger.debug(f"Old: {self.__today_trade_results.get_closed_orders()}")
         except Exception as ex:
             logger.error(f"Trading error: {repr(ex)}")
+            self.__blogger.send_text_message(f"Trading error: {repr(ex)}")
 
         logger.info("Finishing trading today")
         self.__blogger.finish_trading_message()
@@ -138,6 +139,9 @@ class Trader:
 
             if candle:
                 self.__process_new_candles(account_id, candle, current_candles, strategies, signals_before_time)
+
+
+            #self._process_all(account_id, candle, orderbook, trade, strategies)
 
         logger.info("Today trading has been completed")
 
@@ -370,3 +374,7 @@ class Trader:
                 today_trade_strategy[strategy.settings.figi].append(strategy)
 
         return today_trade_strategy
+
+    def _process_all(self, account_id, candle, orderbook, trade, strategies):
+
+        pass

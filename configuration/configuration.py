@@ -1,3 +1,4 @@
+import enum
 from configparser import ConfigParser
 
 from configuration.settings import StrategySettings, AccountSettings, TradingSettings, BlogSettings

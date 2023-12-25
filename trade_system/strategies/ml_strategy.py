@@ -9,15 +9,18 @@ from configuration.settings import StrategySettings
 from trade_system.signal import Signal, SignalType
 from trade_system.strategies.base_strategy import IStrategy
 
-__all__ = ("ChangeAndVolumeStrategy")
+import joblib, pickle
+import pandas as pd
+
+__all__ = ("MlStrategy")
 
 logger = logging.getLogger(__name__)
 
+model = joblib.load('research/models/automl_model_v1.pkl')
 
-class ChangeAndVolumeStrategy(IStrategy):
+class MlStrategy(IStrategy):
     """
-    Example of trade strategy.
-    IMPORTANT: DO NOT USE IT FOR REAL TRADING!
+    ML based trade strategy.
     """
 
     def analyze_all(self, orderbook: OrderBook) -> Optional[Signal]:
@@ -39,9 +42,7 @@ class ChangeAndVolumeStrategy(IStrategy):
     def __init__(self, settings: StrategySettings) -> None:
         self.__settings = settings
 
-        self.__signal_volume = int(settings.settings[self.__SIGNAL_VOLUME_NAME])
         self.__signal_min_candles = int(settings.settings[self.__SIGNAL_MIN_CANDLES_NAME])
-        self.__signal_min_tail = Decimal(settings.settings[self.__SIGNAL_MIN_TAIL_NAME])
 
         self.__long_take = Decimal(settings.settings[self.__LONG_TAKE_NAME])
         self.__long_stop = Decimal(settings.settings[self.__LONG_STOP_NAME])
@@ -91,31 +92,67 @@ class ChangeAndVolumeStrategy(IStrategy):
         sorted(self.__recent_candles, key=lambda x: x.time)
 
         # keep only __signal_min_candles candles in cache
-        if len(self.__recent_candles) > self.__signal_min_candles:
+        if len(self.__recent_candles) >= self.__signal_min_candles:
             self.__recent_candles = self.__recent_candles[len(self.__recent_candles) - self.__signal_min_candles:]
 
         return True
+
+    def __run_model(self, df):
+        tmp = df.resample('H').mean().dropna().reset_index()[['utc', 'close', 'volume']]
+        tmp['utc'] = tmp['utc'].dt.tz_convert(None)
+
+        window_size = 10
+        tmp['MA'] = tmp['close'].rolling(window=window_size).mean()
+        tmp['ROC'] = tmp['close'].pct_change()
+        tmp['Volatility'] = tmp['close'].pct_change().std()
+        tmp['EMA'] = tmp['close'].ewm(span=10, adjust=False).mean()
+        tmp['StdDev'] = tmp['close'].rolling(window=window_size).std()
+        tmp['UpperBB'] = tmp['MA'] + (2 * tmp['StdDev'])
+        tmp['LowerBB'] = tmp['MA'] - (2 * tmp['StdDev'])
+        tmp['VolumeChange'] = tmp['volume'].pct_change()
+        tmp['Momentum'] = tmp['close'].pct_change(periods=window_size)
+
+        delta = tmp['close'].diff()
+        up, down = delta.copy(), delta.copy()
+        up[up < 0] = 0
+        down[down > 0] = 0
+        avg_gain = up.rolling(window=window_size).mean()
+        avg_loss = abs(down.rolling(window=window_size).mean())
+        rs = avg_gain / avg_loss
+        tmp['RSI'] = 100 - (100 / (1 + rs))
+
+        tmp['close'] = tmp['close'].shift(-1)
+        # tmp['volume'] = tmp['volume'].shift(-1)
+        tmp.dropna(subset=['close'], inplace=True)
+        # tmp.dropna(subset=['volume'], inplace=True)
+
+        tmp = tmp.fillna(method='bfill')
+
+        return model.predict(tmp).data[:, 0][-1]
 
     def __is_match_long(self) -> bool:
         """
         Check for LONG signal. All candles in cache:
         Green candle, tail lower than __signal_min_tail, volume more that __signal_volume
         """
+
+        candles = []
+
         for candle in self.__recent_candles:
-            logger.debug(f"Recent Candle to analyze {self.settings.figi} LONG: {candle}")
-            open_, high, close, low = quotation_to_decimal(candle.open), quotation_to_decimal(candle.high), \
-                                      quotation_to_decimal(candle.close), quotation_to_decimal(candle.low)
+            close = float(quotation_to_decimal(candle.close))
+            candles.append({
+                'utc': candle.time,
+                'close': close,
+                'volume': candle.volume,
+            })
 
-            if open_ < close \
-                    and ((high - close) / (high - low)) <= self.__signal_min_tail \
-                    and candle.volume >= self.__signal_volume:
-                logger.debug(f"Continue analyze {self.settings.figi}")
-                continue
+        df = pd.DataFrame(candles)
+        df['utc'] = pd.to_datetime(df['utc'])
+        df = df.set_index('utc')
+        pred = self.__run_model(df)
 
-            logger.debug(f"Break analyze {self.settings.figi}")
-            break
-        else:
-            logger.debug(f"Signal detected {self.settings.figi}")
+        last_candle = self.__recent_candles[-1]
+        if pred > float(quotation_to_decimal(last_candle.close)) * 1.01:
             return True
 
         return False
@@ -125,22 +162,26 @@ class ChangeAndVolumeStrategy(IStrategy):
         Check for LONG signal. All candles in cache:
         Red candle, tail lower than __signal_min_tail, volume more that __signal_volume
         """
+
+        candles = []
+
         for candle in self.__recent_candles:
-            logger.debug(f"Recent Candle to analyze {self.settings.figi} SHORT: {candle}")
-            open_, high, close, low = quotation_to_decimal(candle.open), quotation_to_decimal(candle.high), \
-                                      quotation_to_decimal(candle.close), quotation_to_decimal(candle.low)
+            close = float(quotation_to_decimal(candle.close))
+            candles.append({
+                'utc': candle.time,
+                'close': close,
+                'volume': candle.volume,
+            })
 
-            if open_ > close \
-                    and ((close - low) / (high - low)) <= self.__signal_min_tail \
-                    and candle.volume >= self.__signal_volume:
-                logger.debug(f"Continue analyze {self.settings.figi}")
-                continue
+        df = pd.DataFrame(candles)
+        df['utc'] = pd.to_datetime(df['utc'])
+        df = df.set_index('utc')
+        pred = self.__run_model(df)
 
-            logger.debug(f"Break analyze {self.settings.figi}")
-            break
-        else:
-            logger.debug(f"Signal detected {self.settings.figi}")
+        last_candle = self.__recent_candles[-1]
+        if pred < float(quotation_to_decimal(last_candle.close)) * 0.99:
             return True
+
 
         return False
 

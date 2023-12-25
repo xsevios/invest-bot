@@ -6,6 +6,13 @@ __all__ = ("TestResults")
 class TestResults:
     def __init__(self):
         self.__signals_statuses = []
+        self.__profit = 0
+
+    def add_profit(self, profit):
+        self.__profit += profit
+
+    def get_profit(self):
+        return self.__profit
 
     @property
     def signals_statuses(self) -> list[SignalStatus]:

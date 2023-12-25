@@ -1,11 +1,17 @@
 grpcio --no-binary :all:
 
 tinkoff-investments
-aiogram
+aiogram~=2.25.1
 
 jupyter
 matplotlib
-numpy
+numpy~=1.23.5
 pandas
 torch
 statsmodels
+tinkoff~=0.1.1
+
+joblib
+transformers
+nltk
+gensim

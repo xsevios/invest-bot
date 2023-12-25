@@ -34,6 +34,9 @@ class StrategyTester:
                 high = quotation_to_decimal(candle.high)
                 low = quotation_to_decimal(candle.low)
 
+                price = signal_status.signal.price
+                take = signal_status.signal.take_profit_level
+
                 # Logic is:
                 # if stop or take price level is between high and low, then stop or take will be executed
                 if low <= signal_status.signal.stop_loss_level <= high:
@@ -43,12 +46,16 @@ class StrategyTester:
                     logger.info(f"CANDLE: {candle}")
                     logger.info(f"Signal: {signal_status.signal}")
 
+                    test_result.add_profit(-abs(price - take))
+
                 elif low <= signal_status.signal.take_profit_level <= high:
                     signal_status.take_profit_executed()
 
                     logger.info("Test TAKE PROFIT executed")
                     logger.info(f"CANDLE: {candle}")
                     logger.info(f"Signal: {signal_status.signal}")
+
+                    test_result.add_profit(abs(price - take))
 
             test_candles_pack.append(candle)
 

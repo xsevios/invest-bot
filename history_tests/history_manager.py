@@ -37,6 +37,8 @@ class HistoryTestsManager:
                 from_days,
                 CandleInterval.CANDLE_INTERVAL_1_MIN
             )
+
+            candles = [v for v in candles if 15 > v.time.hour > 8]
         except Exception as ex:
             logger.error(f"Download candles for tests exception: {repr(ex)}")
             return
@@ -61,3 +63,4 @@ class HistoryTestsManager:
         logger.info(f"Take Profit: {len(test_results.get_take_profit_signals())}")
         logger.info(f"Stop Loss: {len(test_results.get_stop_loss_signals())}")
         logger.info(f"Canceled: {len(test_results.get_canceled_signals())}")
+        logger.info(f"Profit: {test_results.get_profit()}")
