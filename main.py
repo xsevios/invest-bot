@@ -6,7 +6,8 @@ from logging.handlers import RotatingFileHandler
 
 from blog.blog_worker import BlogWorker
 from blog.blogger import Blogger
-from configuration.configuration import ProgramConfiguration
+from configuration.configuration import ProgramConfiguration, WorkingMode
+from history_tests.history_manager import HistoryTestsManager
 from invest_api.services.accounts_service import AccountService
 from invest_api.services.client_service import ClientService
 from invest_api.services.instruments_service import InstrumentService
@@ -69,30 +70,43 @@ if __name__ == "__main__":
         market_data_service = MarketDataService(config.tinkoff_token, config.tinkoff_app_name)
 
         if account_service.verify_token():
-            logger.info(f"Blog settings: {config.blog_settings}")
+            logger.info(f"Working mode is {config.working_mode.name} ({config.working_mode})")
 
-            trade_strategies = \
-                [StrategyFactory.new_factory(x.name, x) for x in config.trade_strategy_settings]
+            match config.working_mode:
+                case WorkingMode.HISTORICAL_MODE:
+                    test_strategy = StrategyFactory.new_factory(
+                        config.test_strategy_settings.name,
+                        config.test_strategy_settings
+                    )
 
-            # Queue to keep messages for TG. TradeService(via Blogger) produce, BlogWorker consume (send)
-            messages_queue = asyncio.Queue()
+                    HistoryTestsManager(client_service).start(test_strategy)
 
-            blog_worker = BlogWorker(config.blog_settings, messages_queue)
-            trade_service = TradeService(
-                account_service=account_service,
-                client_service=client_service,
-                instrument_service=instrument_service,
-                operation_service=operation_service,
-                order_service=order_service,
-                stream_service=stream_service,
-                market_data_service=market_data_service,
-                blogger=Blogger(config.blog_settings, config.trade_strategy_settings, messages_queue),
-                account_settings=config.account_settings,
-                trading_settings=config.trading_settings,
-                strategies=trade_strategies
-            )
+                case WorkingMode.TRADE_MODE:
+                    logger.info(f"Blog settings: {config.blog_settings}")
 
-            asyncio.run(start_asyncio_trading(blog_worker, trade_service))
+
+                    trade_strategies = \
+                        [StrategyFactory.new_factory(x.name, x) for x in config.trade_strategy_settings]
+
+                    # Queue to keep messages for TG. TradeService(via Blogger) produce, BlogWorker consume (send)
+                    messages_queue = asyncio.Queue()
+
+                    blog_worker = BlogWorker(config.blog_settings, messages_queue)
+                    trade_service = TradeService(
+                        account_service=account_service,
+                        client_service=client_service,
+                        instrument_service=instrument_service,
+                        operation_service=operation_service,
+                        order_service=order_service,
+                        stream_service=stream_service,
+                        market_data_service=market_data_service,
+                        blogger=Blogger(config.blog_settings, config.trade_strategy_settings, messages_queue),
+                        account_settings=config.account_settings,
+                        trading_settings=config.trading_settings,
+                        strategies=trade_strategies
+                    )
+
+                    asyncio.run(start_asyncio_trading(blog_worker, trade_service))
 
         else:
             logger.critical("Client verification has been failed")
