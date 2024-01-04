@@ -14,6 +14,7 @@ __all__ = ("Blogger")
 
 logger = logging.getLogger(__name__)
 
+TELEGRAM_MESSAGE_LENGTH_LIMIT = 4096
 
 class Blogger:
     """
@@ -47,15 +48,29 @@ class Blogger:
         """
         if self.__blog_status:
             stocks_list = ""
-            for figi_key, strategies in today_trade_strategy.items():
-                for strategy in strategies:
-                    stocks_list = (f"{stocks_list}\nTicker: {strategy.settings.ticker}. "
-                                   f"S: {strategy.settings.short_enabled_flag} "
-                                   f"Strategy: {strategy.settings.name}")
 
             self.__send_text_message("Greetings! We are starting.")
             self.__send_text_message(f"Depo size: {rub_before_trade_day:.2f} rub")
             self.__send_text_message("Stocks list:")
+
+            for figi_key, strategies in sorted(today_trade_strategy.items()):
+                strategies_str = ""
+                ticker_str = ""
+                for strategy in strategies:
+                    short_str = " (s)" if strategy.settings.short_enabled_flag else ""
+                    ticker_str = f"{strategy.settings.ticker}{short_str}"
+                    strategies_str = f"{strategies_str}, {strategy.settings.name}"
+
+                strategies_str = strategies_str[2:]
+
+                new_item_str = f"\nTicker: {ticker_str}. Strategy: {strategies_str}"
+
+                if len(stocks_list) + len(new_item_str) > TELEGRAM_MESSAGE_LENGTH_LIMIT:
+                    self.__send_text_message(stocks_list)
+                    stocks_list = new_item_str
+                else:
+                    stocks_list = f"{stocks_list}{new_item_str}"
+
             self.__send_text_message(stocks_list)
 
     def finish_trading_message(self) -> None:
