@@ -15,3 +15,4 @@ joblib
 transformers
 nltk
 gensim
+lightautoml
