@@ -32,18 +32,24 @@ class HistoryTestsManager:
 
         # Download candles for tests
         try:
-            candles = self.__client_service.download_historic_candle(
+            hour_candles = self.__client_service.download_historic_candle(
+                strategy.settings.figi,
+                from_days,
+                CandleInterval.CANDLE_INTERVAL_HOUR
+            )
+            min_candles = self.__client_service.download_historic_candle(
                 strategy.settings.figi,
                 from_days,
                 CandleInterval.CANDLE_INTERVAL_1_MIN
             )
 
-            candles = [v for v in candles if 15 > v.time.hour > 8]
+            # filter candles outside of main trade session
+            hour_candles = [v for v in hour_candles if 15 > v.time.hour > 8]
         except Exception as ex:
             logger.error(f"Download candles for tests exception: {repr(ex)}")
             return
 
-        test_results = StrategyTester(strategy).test(candles)
+        test_results = StrategyTester(strategy).test(hour_candles, min_candles)
 
         # Show all results to log file
         self.__log_test_results(test_results)

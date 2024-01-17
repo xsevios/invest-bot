@@ -20,42 +20,50 @@ class StrategyTester:
 
     def test(
             self,
-            candles: list[HistoricCandle],
+            hour_candles: list[HistoricCandle],
+            min_candles: list[HistoricCandle],
             portion: int = 1
     ) -> TestResults:
-        logger.info(f"Start test: {self.__strategy}, portion {portion}, candles count: {len(candles)}")
+        logger.info(f"Start test: {self.__strategy}, portion {portion}, "
+                    f"hour candles count: {len(hour_candles)}, min candles count: {len(min_candles)}")
 
         test_result = TestResults()
         test_candles_pack = []
 
-        for candle in candles:
-            # Check price from candle for take or stop price level
-            for signal_status in test_result.get_proposed_signals():
-                high = quotation_to_decimal(candle.high)
-                low = quotation_to_decimal(candle.low)
+        for i, candle in enumerate(hour_candles):
+            logger.info(f"Progress: {round(i / len(hour_candles) * 100.0, 2)}%")
 
-                price = signal_status.signal.price
-                take = signal_status.signal.take_profit_level
+            filtered_candles = [cur_candle for cur_candle in min_candles
+                                if cur_candle.time.date() == candle.time.date() and cur_candle.time.hour == candle.time.hour]
+            for min_candle in filtered_candles:
 
-                # Logic is:
-                # if stop or take price level is between high and low, then stop or take will be executed
-                if low <= signal_status.signal.stop_loss_level <= high:
-                    signal_status.stop_loss_executed()
+                # Check price from candle for take or stop price level
+                for signal_status in test_result.get_proposed_signals():
+                    high = quotation_to_decimal(min_candle.high)
+                    low = quotation_to_decimal(min_candle.low)
 
-                    logger.info("Test STOP LOSS executed")
-                    logger.info(f"CANDLE: {candle}")
-                    logger.info(f"Signal: {signal_status.signal}")
+                    price = signal_status.signal.price
+                    take = signal_status.signal.take_profit_level
 
-                    test_result.add_profit(-abs(price - take))
+                    # Logic is:
+                    # if stop or take price level is between high and low, then stop or take will be executed
+                    if low <= signal_status.signal.stop_loss_level <= high:
+                        signal_status.stop_loss_executed()
 
-                elif low <= signal_status.signal.take_profit_level <= high:
-                    signal_status.take_profit_executed()
+                        logger.info("Test STOP LOSS executed")
+                        logger.info(f"CANDLE: {min_candle}")
+                        logger.info(f"Signal: {signal_status.signal}")
 
-                    logger.info("Test TAKE PROFIT executed")
-                    logger.info(f"CANDLE: {candle}")
-                    logger.info(f"Signal: {signal_status.signal}")
+                        test_result.add_profit(-abs(price - take))
 
-                    test_result.add_profit(abs(price - take))
+                    elif low <= signal_status.signal.take_profit_level <= high:
+                        signal_status.take_profit_executed()
+
+                        logger.info("Test TAKE PROFIT executed")
+                        logger.info(f"CANDLE: {min_candle}")
+                        logger.info(f"Signal: {signal_status.signal}")
+
+                        test_result.add_profit(abs(price - take))
 
             test_candles_pack.append(candle)
 
