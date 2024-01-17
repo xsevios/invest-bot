@@ -1,2 +1,8 @@
 tinkoff-investments
 aiogram
+
+jupyter
+matplotlib
+numpy
+pandas
+torch
